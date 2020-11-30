@@ -1,53 +1,54 @@
 package de.christianschliz.spigotms.plugin;
 
+import de.christianschliz.spigotms.api.SpigotService;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.util.*;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Arrays;
+import java.util.List;
 
 public class SpigotMS extends JavaPlugin {
 
-    ServiceManager serviceManager;
-
     @Override
     public void onEnable() {
-        serviceManager.enableLoadedServices();
+        saveConfig();
+
+        try {
+            List<File> files = Arrays.asList(new File(getDataFolder().getPath() + "/services").listFiles());
+            URL[] urls = new URL[files.size()];
+            for (int i = 0; i < files.size(); i++) {
+                try {
+                    urls[i] = files.get(i).toURI().toURL();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            URLClassLoader serviceClassLoader = new URLClassLoader(urls, SpigotMS.class.getClassLoader());
+
+            try {
+                Class<?> testServiceClass = Class.forName("me.test.TestService", true, serviceClassLoader);
+
+                SpigotService serviceInstance = (SpigotService) testServiceClass.getDeclaredConstructor().newInstance();
+                serviceInstance.setPluginInstance(this);
+                serviceInstance.onEnable();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
     }
 
     @Override
     public void onLoad() {
-        getConfig().options().copyDefaults(true);
-        saveConfig();
 
-        File localServiceFolder = new File(getDataFolder() + "/services");
-
-        if(!localServiceFolder.exists() && localServiceFolder.getParentFile().canWrite()) {
-            localServiceFolder.mkdirs();
-        }
-
-        List<File> remoteServiceDirectories = new ArrayList<>();
-
-        if(getConfig().contains("remoteServiceDirectories")) {
-            List<String> remoteServiceDirectoryPaths = getConfig().getStringList("remoteServiceDirectories");
-
-            for(String path : remoteServiceDirectoryPaths) {
-                File directory = new File(path);
-
-                if(directory.exists() && directory.canRead()) {
-                    remoteServiceDirectories.add(directory);
-                } else {
-                    System.out.println("Cannot read contents of remote path: " + path);
-                }
-            }
-        }
-
-        serviceManager = new ServiceManager(localServiceFolder, remoteServiceDirectories, this);
-
-        serviceManager.loadLocalServices();
     }
 
     @Override
     public void onDisable() {
-        serviceManager.disableLoadedServices();
+        super.onDisable();
     }
 }
