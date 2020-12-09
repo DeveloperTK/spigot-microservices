@@ -2,3 +2,12 @@ main: de.christianschliz.spigotms.plugin.SpigotMS
 name: SpigotMS
 version: 0.2.0
 author: DevTK
+
+commands:
+  microservices:
+    description: Manage your active SpigotServices
+    usage: /microservice [list|enable|disable|reload] [<service-name>]
+    aliases:
+      - ms
+      - service
+      - microservice

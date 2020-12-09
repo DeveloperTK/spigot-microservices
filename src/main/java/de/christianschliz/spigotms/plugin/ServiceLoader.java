@@ -1,10 +1,6 @@
 package de.christianschliz.spigotms.plugin;
 
 import de.christianschliz.spigotms.api.SpigotService;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -13,8 +9,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 
-public class ServiceManager {
+public class ServiceLoader {
+
+    // -- instance fields
 
     private final SpigotMS pluginInstance;
 
@@ -22,7 +23,7 @@ public class ServiceManager {
     private final File[] remoteServiceDirectories;
     private final HashMap<String, SpigotService> services;
 
-    // Constructors
+    // -- constructors
 
     /**
      * The ServiceManager is responsible for loading, enabling
@@ -30,24 +31,24 @@ public class ServiceManager {
      * directory in the plugin folder, but can also retrieve
      * services from your network.
      *
-     * @param _localServiceDirectory    The path to the local directory.
+     * @param localServiceDirectory    The path to the local directory.
      *                                  Usually: <code>JavaPlugin.getDataFolder() + "/services"</code>
-     * @param _remoteServiceDirectories A list of remote directories on your drive
+     * @param remoteServiceDirectories A list of remote directories on your drive
      *                                  or your network. Services from there are loaded
      *                                  but not enabled by default and have to be explicitly
      *                                  set to be enabled via the <code>service.yml</code>
-     * @param _pluginInstance           The JavaPlugin instance, which all services reference
+     * @param pluginInstance           The JavaPlugin instance, which all services reference
      *                                  when for example registering command or events.
      * */
-    public ServiceManager(final File _localServiceDirectory,
-                          final List<File> _remoteServiceDirectories, SpigotMS _pluginInstance) {
-        this.localServiceDirectory = _localServiceDirectory;
-        this.remoteServiceDirectories = _remoteServiceDirectories.toArray(new File[0]);
-        this.pluginInstance = _pluginInstance;
+    public ServiceLoader(final File localServiceDirectory,
+                         final List<File> remoteServiceDirectories, SpigotMS pluginInstance) {
+        this.localServiceDirectory = localServiceDirectory;
+        this.remoteServiceDirectories = remoteServiceDirectories.toArray(new File[0]);
+        this.pluginInstance = pluginInstance;
         services = new HashMap<>();
     }
 
-    // public methods
+    // -- public methods
 
     /**
      * Only searches the services directory inside
@@ -55,26 +56,26 @@ public class ServiceManager {
      * */
     @SuppressWarnings("unused")
     public void loadLocalServices() {
-        registerServicesFromDirectors(this.localServiceDirectory, true);
+        registerServicesFromDirectories(this.localServiceDirectory, true);
     }
 
     /**
-     * Enables all services loaded into {@link ServiceManager#services}
+     * Enables all services loaded into {@link ServiceLoader#services}.
      * */
     public void enableLoadedServices() {
         services.forEach((name, service) -> {
             System.out.println("[SpigotMS] Enabling service " + name + " at " + service.getClass().getCanonicalName());
-            service.onEnable();
+            service.tryEnable();
         });
     }
 
     /**
-     * Disables all services loaded into {@link ServiceManager#services}
+     * Disables all services loaded into {@link ServiceLoader#services}.
      * */
     public void disableLoadedServices() {
         services.forEach((name, service) -> {
             System.out.println("[SpigotMS] Disabling service " + name + " at " + service.getClass().getCanonicalName());
-            service.onDisable();
+            service.doDisable();
         });
     }
 
@@ -84,13 +85,13 @@ public class ServiceManager {
      * */
     @SuppressWarnings("unused")
     public void loadServices() {
-        if(Objects.nonNull(this.localServiceDirectory)) {
-            registerServicesFromDirectors(this.localServiceDirectory, true);
+        if (Objects.nonNull(this.localServiceDirectory)) {
+            registerServicesFromDirectories(this.localServiceDirectory, true);
         }
 
         if (Objects.nonNull(this.remoteServiceDirectories)) {
-            for(File directory : this.remoteServiceDirectories) {
-                registerServicesFromDirectors(directory, false);
+            for (File directory : this.remoteServiceDirectories) {
+                registerServicesFromDirectories(directory, false);
             }
         }
     }
@@ -105,7 +106,7 @@ public class ServiceManager {
      * */
     @SuppressWarnings("unused")
     public SpigotService getService(String name) {
-        if(this.services.containsKey(name)) {
+        if (this.services.containsKey(name)) {
             return this.services.get(name);
         } else {
             System.err.printf("No such service named %s found %n", name);
@@ -113,16 +114,19 @@ public class ServiceManager {
         }
     }
 
-    // private methods
+    // -- private methods
 
-    private void registerServicesFromDirectors(final File directory, final boolean isEnabledByDefault) {
+    private void registerServicesFromDirectories(final File directory, final boolean isEnabledByDefault) {
         URL[] urls = new URL[0];
 
         if (Objects.isNull(directory)) {
+            // No directory specified
             System.out.println("Cannot load Services from File: null");
-        } else if(!directory.canRead()) {
+        } else if (!directory.canRead()) {
+            // Can't read from the specified path
             System.out.println("Cannot load Services from a read protected path!");
-        } else if(directory.isDirectory()) {
+        } else if (directory.isDirectory()) {
+            // Load all files within the specified directory
             ArrayList<File> files = new ArrayList<>(
                     Arrays.asList(
                             Objects.requireNonNull(directory.listFiles())
@@ -139,7 +143,8 @@ public class ServiceManager {
                     e.printStackTrace();
                 }
             }
-        } else if(directory.isFile() && directory.getName().endsWith(".jar")) {
+        } else if (directory.isFile() && directory.getName().endsWith(".jar")) {
+            // Only load one jar file
             try {
                 urls = new URL[]{directory.toURI().toURL()};
             } catch (MalformedURLException exception) {
@@ -154,37 +159,44 @@ public class ServiceManager {
 
     private void loadJARsFromURLIntoClasspath(final URL[] urls, final boolean isEnabledByDefault) {
         try {
+            // Load all .jar files from the target directory into the SpigotMS classpath
             URLClassLoader serviceClassLoader = new URLClassLoader(urls, SpigotMS.class.getClassLoader());
 
+            // A list of all service.yml config files found inside the directory
             Enumeration<URL> configPaths = serviceClassLoader.findResources("service.yml");
 
+            // Iterate over every service.yml config file
             while (configPaths.hasMoreElements()) {
+                // Read the file
                 InputStreamReader config = new InputStreamReader(configPaths.nextElement().openStream());
-                FileConfiguration fileConfiguration = new YamlConfiguration();
 
+                // load the YAML structure
+                FileConfiguration fileConfiguration = new YamlConfiguration();
                 fileConfiguration.load(config);
 
-                if(fileConfiguration.contains("name") && fileConfiguration.contains("main")) {
+                // check if the configuration file has all necessary fields
+                if (fileConfiguration.contains("name") && fileConfiguration.contains("main")
+                        && fileConfiguration.contains("enable")) {
                     try {
+                        // Load the target class
                         Class<?> testServiceClass = Class.forName(
                                 fileConfiguration.getString("main"), true, serviceClassLoader);
 
-                        SpigotService serviceInstance;
+                        // Create an instance of the targeted class
+                        SpigotService serviceInstance = (SpigotService)
+                                testServiceClass.getDeclaredConstructor().newInstance();
 
-                        if (fileConfiguration.contains("enable")) {
-                            serviceInstance = (SpigotService) testServiceClass.getDeclaredConstructor(Boolean.class)
-                                    .newInstance(fileConfiguration.getBoolean("enable"));
-                        } else {
-                            serviceInstance = (SpigotService) testServiceClass.getDeclaredConstructor(Boolean.class)
-                                    .newInstance(isEnabledByDefault);
-                        }
-
+                        serviceInstance.setEnabledByDefault(fileConfiguration.getBoolean("enable"));
                         serviceInstance.setPluginInstance(this.pluginInstance);
+                        serviceInstance.setConfiguration(fileConfiguration);
 
+                        // Add the service to the list
                         services.put(fileConfiguration.getString("name"), serviceInstance);
                     } catch (InstantiationException | InvocationTargetException | NoSuchMethodException exception) {
+                        // Could either not cast to SpigotService or the jar is obfuscated
                         exception.printStackTrace();
                     } catch (IllegalAccessException | ClassNotFoundException exception) {
+                        // bad jar
                         System.err.println("Please check your configuration files");
                         exception.printStackTrace();
                     }
@@ -197,7 +209,7 @@ public class ServiceManager {
         }
     }
 
-    // Getter and Setter
+    // -- getter and setter
 
     @SuppressWarnings("unused")
     public File getLocalServiceDirectory() {
@@ -207,5 +219,10 @@ public class ServiceManager {
     @SuppressWarnings("unused")
     public File[] getRemoteServiceDirectories() {
         return remoteServiceDirectories;
+    }
+
+    @SuppressWarnings("unused")
+    public HashMap<String, SpigotService> getServices() {
+        return services;
     }
 }

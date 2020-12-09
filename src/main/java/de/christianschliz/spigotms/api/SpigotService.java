@@ -6,52 +6,78 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 
+import java.io.File;
 import java.lang.reflect.Field;
 
 @SuppressWarnings("unused")
 public abstract class SpigotService {
 
+    // -- instance fields
+
     private SpigotMS pluginInstance;
 
-    private final boolean enabledByDefault;
+    private boolean enabledByDefault;
+    private boolean isEnabled;
 
-    // constructors
+    private FileConfiguration configuration;
 
-    public SpigotService(boolean enabledByDefault) {
-        this.enabledByDefault = enabledByDefault;
-    }
+    // -- constructors
 
     public SpigotService() {
-        this(true);
+        enabledByDefault = true;
+        isEnabled = false;
     }
 
-    // public methods
+    // -- public methods
 
     /**
      * onEnable is called when the service gets enabled.
      * Methods like {@link SpigotService#registerCommand(String, CommandExecutor)}
-     * and {@link SpigotService#registerEvent(Listener)} are available here.
+     * and {@link SpigotService#registerEvents(Listener)} are available here.
      * */
-    public void onEnable() {
+    protected void onEnable() {
     }
+
+    public void tryEnable() {
+        if(this.configuration.contains("enable") && this.configuration.getBoolean("enable")) {
+            this.isEnabled = true;
+            onEnable();
+        }
+    }
+
+    public void doEnable() {
+        this.isEnabled = true;
+        onEnable();
+    }
+
 
     /**
      * onDisable is called when the service gets disabled.
      * Files or states should be saved here
      * */
-    public void onDisable() {
+    protected void onDisable() {
+    }
+
+    public void doDisable() {
+        this.isEnabled = false;
     }
 
     /**
      * On load is called when the service got loaded but before any other
      * service was enabled. It is ideal for loading states or configurations.
      * */
-    public void onLoad() {
+    protected void onLoad() {
     }
 
-    public void registerCommand(String commandLabel, CommandExecutor commandExecutor) {
+    public void doLoad() {
+        onLoad();
+    }
+
+    protected void registerCommand(String commandLabel, CommandExecutor commandExecutor) {
         try {
             final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
             bukkitCommandMap.setAccessible(true);
@@ -70,11 +96,15 @@ public abstract class SpigotService {
         }
     }
 
-    public void registerEvent(Listener eventListener) {
+    protected void registerEvents(Listener eventListener) {
         this.pluginInstance.getServer().getPluginManager().registerEvents(eventListener, this.pluginInstance);
     }
 
-    // getter and setter
+    protected void unregisterEvents(Listener eventListener) {
+        HandlerList.unregisterAll(eventListener);
+    }
+
+    // -- getter and setter
 
     public SpigotMS getPlugin() {
         return pluginInstance;
@@ -84,7 +114,19 @@ public abstract class SpigotService {
         this.pluginInstance = pluginInstance;
     }
 
+    public void setEnabledByDefault(boolean enabledByDefault) {
+        this.enabledByDefault = enabledByDefault;
+    }
+
+    public void setConfiguration(FileConfiguration configuration) {
+        this.configuration = configuration;
+    }
+
     public boolean isEnabledByDefault() {
         return enabledByDefault;
+    }
+
+    public boolean isEnabled() {
+        return isEnabled;
     }
 }

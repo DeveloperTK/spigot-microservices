@@ -1,1 +1,20 @@
+# Remote service directories (outside of the
+# plugin directory) to load services from.
 remoteServiceDirectories: []
+
+# Shared database controller configuration
+# for use in services.
+database:
+  mysql:
+    server: "localhost"
+    port: 3306
+    database: "spigotservices"
+    username: "username"
+    password: "password"
+  redis:
+    # If this array contains one String, the
+    # single server configuration is used, otherwise
+    # it defaults to the cluster configuration.
+    redisNodes: []
+  cassandra:
+    cassandraNodes: []
