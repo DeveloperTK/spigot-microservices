@@ -4,19 +4,30 @@ import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 
+/**
+ * @author Christian Schliz
+ * @version 1.0
+ * */
 public final class RedisController
         implements DatabaseRepository<RedissonClient> {
 
-    private Config config;
+    private final Config config;
     private RedissonClient redissonClient;
 
-    public RedisController(final String... nodeAddresses) {
+    /**
+     * The Redis Controller class for access within SpigotServices.
+     *
+     * @param nodeAddresses Redis endpoints
+     * @param password The corresponding password
+     * */
+    public RedisController(final String[] nodeAddresses, final String password) {
         this.config = new Config();
 
         if (nodeAddresses.length == 1) {
-            config.useSingleServer().setAddress(nodeAddresses[0]);
+            config.useSingleServer().setPassword(password).setAddress(nodeAddresses[0]);
+
         } else if (nodeAddresses.length > 1) {
-            config.useClusterServers().addNodeAddress(nodeAddresses);
+            config.useClusterServers().setPassword(password).addNodeAddress(nodeAddresses);
         }
     }
 

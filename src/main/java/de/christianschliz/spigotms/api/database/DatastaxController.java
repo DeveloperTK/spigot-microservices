@@ -4,6 +4,10 @@ import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.ResultSet;
 import java.net.InetSocketAddress;
 
+/**
+ * @author Christian Schliz
+ * @version 1.0
+ * */
 public class DatastaxController implements DatabaseRepository<CqlSession> {
 
     private CqlSession session;
@@ -33,10 +37,13 @@ public class DatastaxController implements DatabaseRepository<CqlSession> {
                     .addContactPoint(this.endpoint)
                     .withAuthCredentials(this.username, this.password)
                     .build();
-
-            ResultSet rs = session.execute("select release_version from system.local");
+            session.executeAsync("select release_version from system.local").thenAccept(result -> {
+                if (result == null) {
+                    System.err.println("Could not connect to Cassandra database.");
+                }
+            });
         } catch (NullPointerException exception) {
-            System.err.println("Error while connecting to Cassandra Database at " + endpoint.getHostString());
+            System.err.println("Error while connecting to Cassandra database at " + endpoint.getHostString());
             exception.printStackTrace();
         }
     }

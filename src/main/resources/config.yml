@@ -11,10 +11,17 @@ database:
     database: "spigotservices"
     username: "username"
     password: "password"
+    enabled: false
   redis:
     # If this array contains one String, the
     # single server configuration is used, otherwise
     # it defaults to the cluster configuration.
     redisNodes: []
-  cassandra:
-    cassandraNodes: []
+    password: "password"
+    enabled: false
+  datastax:
+    server: "localhost"
+    port: 42069
+    username: "username"
+    password: "password"
+    enabled: false

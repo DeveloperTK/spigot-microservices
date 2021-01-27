@@ -3,6 +3,10 @@ package de.christianschliz.spigotms.api.database;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
+/**
+ * @author Christian Schliz
+ * @version 1.0
+ * */
 public final class MySQLController
         implements DatabaseRepository<HikariDataSource> {
 
@@ -36,11 +40,8 @@ public final class MySQLController
      * @param username A valid mysql database user
      * @param password The corresponding password
      * */
-    public MySQLController(final String hostname,
-                           final int port,
-                           final String database,
-                           final String username,
-                           final String password) {
+    public MySQLController(final String hostname, final int port, final String database,
+                           final String username, final String password) {
         this(String.format("jdbc:mysql://%s:%s/%s", hostname, port, database),
                 username, password);
     }

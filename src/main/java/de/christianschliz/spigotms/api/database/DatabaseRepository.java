@@ -1,5 +1,11 @@
 package de.christianschliz.spigotms.api.database;
 
+/**
+ * @author Christian Schliz
+ * @version 1.0
+ *
+ * @param <T> Database driver session/connection object
+ * */
 public interface DatabaseRepository<T> {
 
     /**

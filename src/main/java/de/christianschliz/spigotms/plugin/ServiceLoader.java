@@ -13,6 +13,10 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
+/**
+ * @author Christian Schliz
+ * @version 1.0
+ * */
 public class ServiceLoader {
 
     // -- instance fields
@@ -116,6 +120,7 @@ public class ServiceLoader {
 
     // -- private methods
 
+    @SuppressWarnings("checkstyle:IllegalCatch")
     private void registerServicesFromDirectories(final File directory, final boolean isEnabledByDefault) {
         URL[] urls = new URL[0];
 
@@ -139,7 +144,7 @@ public class ServiceLoader {
             for (int i = 0; i < files.size(); i++) {
                 try {
                     urls[i] = files.get(i).toURI().toURL();
-                } catch (Exception e) {
+                } catch (MalformedURLException | NullPointerException e) {
                     e.printStackTrace();
                 }
             }
@@ -211,16 +216,25 @@ public class ServiceLoader {
 
     // -- getter and setter
 
+    /**
+     * @return File local service directory
+     * */
     @SuppressWarnings("unused")
     public File getLocalServiceDirectory() {
         return localServiceDirectory;
     }
 
+    /**
+     * @return File[] remote service directories
+     * */
     @SuppressWarnings("unused")
     public File[] getRemoteServiceDirectories() {
         return remoteServiceDirectories;
     }
 
+    /**
+     * @return HashMap<String, SpigotService> services
+     * */
     @SuppressWarnings("unused")
     public HashMap<String, SpigotService> getServices() {
         return services;
